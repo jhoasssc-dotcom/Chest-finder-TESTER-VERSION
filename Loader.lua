@@ -1,4 +1,4 @@
---[[ Chest Finder v13.2 - Bolinha sempre na frente --]]
+--[[ Chest Finder v13.2 - Bolinha sempre na frente (COMPLETO) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -22,7 +22,6 @@ local function setSpeed(s)
     end
 end
 
--- 🔍 Verifica contorno
 local function temContorno(obj)
     if obj:FindFirstChildWhichIsA("Highlight") then return true end
     if obj:FindFirstChildWhichIsA("SelectionBox") then return true end
@@ -111,14 +110,12 @@ local function acharChests()
     return lista
 end
 
--- GUI com prioridade alta
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global  -- 🔥 FAZ FICAR NA FRENTE
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.DisplayOrder = 999
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Bolinha
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 50, 0, 50)
 bola.Position = UDim2.new(0, 10, 0, 100)
@@ -126,7 +123,7 @@ bola.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 bola.Image = "rbxassetid://3926305904"
 bola.ImageColor3 = Color3.fromRGB(0, 255, 255)
 bola.Visible = true
-bola.ZIndex = 999  -- 🔥 Prioridade máxima
+bola.ZIndex = 999
 bola.Parent = gui
 
 local bolaC = Instance.new("UICorner")
@@ -142,7 +139,6 @@ bolaTexto.TextSize = 28
 bolaTexto.Font = Enum.Font.GothamBold
 bolaTexto.Parent = bola
 
--- Frame principal
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 340, 0, 450)
 frame.Position = UDim2.new(0.5, -170, 0.5, -225)
@@ -164,7 +160,6 @@ borda.BorderSizePixel = 2
 borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
 borda.Parent = frame
 
--- Barra de título
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
 barra.BackgroundTransparency = 1
@@ -209,7 +204,6 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
--- Botão Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 310, 0, 35)
 autoBtn.Position = UDim2.new(0.5, -155, 0, 45)
@@ -224,7 +218,6 @@ local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
 autoC.Parent = autoBtn
 
--- Botão Anti-AFK
 local afkBtn = Instance.new("TextButton")
 afkBtn.Size = UDim2.new(0, 310, 0, 35)
 afkBtn.Position = UDim2.new(0.5, -155, 0, 88)
@@ -239,7 +232,6 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
--- Velocidade
 local speedFrame = Instance.new("Frame")
 speedFrame.Size = UDim2.new(0, 310, 0, 50)
 speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
@@ -327,7 +319,6 @@ speedValueBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Informações
 local infoFrame = Instance.new("Frame")
 infoFrame.Size = UDim2.new(0, 310, 0, 50)
 infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
@@ -350,7 +341,6 @@ infoText.TextWrapped = true
 infoText.Font = Enum.Font.Gotham
 infoText.Parent = infoFrame
 
--- Status
 local statusFrame = Instance.new("Frame")
 statusFrame.Size = UDim2.new(0, 310, 0, 50)
 statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
@@ -373,7 +363,6 @@ statusText.TextWrapped = true
 statusText.Font = Enum.Font.Gotham
 statusText.Parent = statusFrame
 
--- Contador
 local contFrame = Instance.new("Frame")
 contFrame.Size = UDim2.new(0, 310, 0, 30)
 contFrame.Position = UDim2.new(0.5, -155, 0, 313)
@@ -395,7 +384,6 @@ contText.TextSize = 11
 contText.Font = Enum.Font.Gotham
 contText.Parent = contFrame
 
--- Reset
 local resetBtn = Instance.new("TextButton")
 resetBtn.Size = UDim2.new(0, 90, 0, 28)
 resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
@@ -412,7 +400,6 @@ resetC.Parent = resetBtn
 
 resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
 
--- Notificação
 local notifFrame = Instance.new("Frame")
 notifFrame.Size = UDim2.new(0, 250, 0, 45)
 notifFrame.Position = UDim2.new(1, -270, 0, 50)
@@ -442,7 +429,6 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- Movimento
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
@@ -472,7 +458,6 @@ local function mover(chest)
     end
 end
 
--- Loop
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
@@ -492,7 +477,6 @@ local function iniciarLoop()
     end)
 end
 
--- Arrastar UI
 local arrastando = false
 local arrastarInicio, frameInicio
 barra.InputBegan:Connect(function(i)
@@ -512,7 +496,6 @@ UserInput.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then arrastando = false end
 end)
 
--- Arrastar bolinha
 local bolaArrastando = false
 local bolaInicio, bolaPosInicio
 bola.InputBegan:Connect(function(i)
@@ -532,7 +515,6 @@ UserInput.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then bolaArrastando = false end
 end)
 
--- Minimizar/Restaurar
 local function minimizar()
     frame.Visible = false
     bola.Visible = true
@@ -551,7 +533,6 @@ end)
 fechar.MouseButton1Click:Connect(minimizar)
 bola.MouseButton1Click:Connect(restaurar)
 
--- Toggle Auto Chest
 autoBtn.MouseButton1Click:Connect(function()
     auto = not auto
     if auto then
@@ -569,7 +550,6 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Anti AFK
 local afkAtivo = false
 local afkLoop
 local function iniciarAFK()
@@ -608,17 +588,15 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Iniciar
 task.spawn(function()
     wait(2)
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13.2 - Bolinha sempre na frente")
+    print("✅ Chest Finder v13.2 carregado!")
     avisar("🚀 Clique na bolinha 'S' para abrir o menu")
 end)
 
--- Animação
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
