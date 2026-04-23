@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Velocidade inicial 50 --]]
+--[[ Chest Finder v13.0 - Coleta contínua (corrigido) --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -9,14 +9,14 @@ local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 50   -- <--- ALTERADO de 16 para 50
+local velocidade = 16
 
 local function setSpeed(s)
-    velocidade = math.clamp(s, 16, 100)   -- mínimo 16, máximo 100 (como pedido)
+    velocidade = math.clamp(s, 10, 100)
     hum.WalkSpeed = velocidade
     if speedValueBtn then speedValueBtn.Text = tostring(math.floor(velocidade)) end
     if sliderFill then
-        local p = (velocidade - 16) / 84   -- ajuste do slider para range 16-100
+        local p = (velocidade - 10) / 90
         sliderFill.Size = UDim2.new(p, 0, 1, 0)
         sliderBtn.Position = UDim2.new(p, -6, 0.5, -6)
     end
@@ -111,14 +111,13 @@ local function acharChests()
     return lista
 end
 
--- GUI
+-- GUI (exatamente igual ao v13.0 original)
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.DisplayOrder = 999
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Bolinha (sempre visível)
 local bola = Instance.new("ImageButton")
 bola.Size = UDim2.new(0, 50, 0, 50)
 bola.Position = UDim2.new(0, 10, 0, 100)
@@ -142,7 +141,6 @@ bolaTexto.TextSize = 28
 bolaTexto.Font = Enum.Font.GothamBold
 bolaTexto.Parent = bola
 
--- Frame principal (começa invisível)
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 340, 0, 450)
 frame.Position = UDim2.new(0.5, -170, 0.5, -225)
@@ -164,7 +162,6 @@ borda.BorderSizePixel = 2
 borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
 borda.Parent = frame
 
--- Barra de título
 local barra = Instance.new("Frame")
 barra.Size = UDim2.new(1, 0, 0, 30)
 barra.BackgroundTransparency = 1
@@ -209,7 +206,6 @@ local fecharC = Instance.new("UICorner")
 fecharC.CornerRadius = UDim.new(0, 5)
 fecharC.Parent = fechar
 
--- Botão Auto Chest
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0, 310, 0, 35)
 autoBtn.Position = UDim2.new(0.5, -155, 0, 45)
@@ -224,7 +220,6 @@ local autoC = Instance.new("UICorner")
 autoC.CornerRadius = UDim.new(0, 6)
 autoC.Parent = autoBtn
 
--- Botão Anti-AFK
 local afkBtn = Instance.new("TextButton")
 afkBtn.Size = UDim2.new(0, 310, 0, 35)
 afkBtn.Position = UDim2.new(0.5, -155, 0, 88)
@@ -239,7 +234,6 @@ local afkC = Instance.new("UICorner")
 afkC.CornerRadius = UDim.new(0, 6)
 afkC.Parent = afkBtn
 
--- Velocidade
 local speedFrame = Instance.new("Frame")
 speedFrame.Size = UDim2.new(0, 310, 0, 50)
 speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
@@ -274,14 +268,14 @@ sliderBgC.CornerRadius = UDim.new(1, 0)
 sliderBgC.Parent = sliderBg
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new((velocidade - 16) / 84, 0, 1, 0)
+sliderFill.Size = UDim2.new((velocidade - 10) / 90, 0, 1, 0)
 sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
 sliderFill.BorderSizePixel = 0
 sliderFill.Parent = sliderBg
 
 local sliderBtn = Instance.new("TextButton")
 sliderBtn.Size = UDim2.new(0, 12, 0, 12)
-sliderBtn.Position = UDim2.new((velocidade - 16) / 84, -6, 0.5, -6)
+sliderBtn.Position = UDim2.new((velocidade - 10) / 90, -6, 0.5, -6)
 sliderBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
 sliderBtn.Text = ""
 sliderBtn.BorderSizePixel = 0
@@ -303,7 +297,7 @@ UserInput.InputChanged:Connect(function(input)
     if sliderDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
         local pos = input.Position.X - sliderBg.AbsolutePosition.X
         local p = math.clamp(pos / sliderBg.AbsoluteSize.X, 0, 1)
-        setSpeed(16 + (p * 84))
+        setSpeed(10 + (p * 90))
     end
 end)
 UserInput.InputEnded:Connect(function(input)
@@ -327,7 +321,6 @@ speedValueBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- Informações
 local infoFrame = Instance.new("Frame")
 infoFrame.Size = UDim2.new(0, 310, 0, 50)
 infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
@@ -343,14 +336,13 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -10)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO\n🗑️ Deleta baús da loja e recompensas\n⚡ Velocidade inicial: 50 (pode reduzir até 16)"
+infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO\n🗑️ Deleta baús da loja e recompensas"
 infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoText.TextSize = 9
 infoText.TextWrapped = true
 infoText.Font = Enum.Font.Gotham
 infoText.Parent = infoFrame
 
--- Status
 local statusFrame = Instance.new("Frame")
 statusFrame.Size = UDim2.new(0, 310, 0, 50)
 statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
@@ -373,7 +365,6 @@ statusText.TextWrapped = true
 statusText.Font = Enum.Font.Gotham
 statusText.Parent = statusFrame
 
--- Contador
 local contFrame = Instance.new("Frame")
 contFrame.Size = UDim2.new(0, 310, 0, 30)
 contFrame.Position = UDim2.new(0.5, -155, 0, 313)
@@ -395,12 +386,11 @@ contText.TextSize = 11
 contText.Font = Enum.Font.Gotham
 contText.Parent = contFrame
 
--- Reset
 local resetBtn = Instance.new("TextButton")
 resetBtn.Size = UDim2.new(0, 90, 0, 28)
 resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
 resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-resetBtn.Text = "↺ Resetar (50)"
+resetBtn.Text = "↺ Resetar (16)"
 resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
 resetBtn.TextSize = 10
 resetBtn.Font = Enum.Font.Gotham
@@ -410,9 +400,8 @@ local resetC = Instance.new("UICorner")
 resetC.CornerRadius = UDim.new(0, 5)
 resetC.Parent = resetBtn
 
-resetBtn.MouseButton1Click:Connect(function() setSpeed(50) end)
+resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
 
--- Notificação
 local notifFrame = Instance.new("Frame")
 notifFrame.Size = UDim2.new(0, 250, 0, 45)
 notifFrame.Position = UDim2.new(1, -270, 0, 50)
@@ -442,18 +431,22 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- Movimento
+-- 🔥 FUNÇÃO MOVER CORRIGIDA (garante que o loop continue)
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local ok = pcall(function() path:ComputeAsync(char:GetPivot().Position, chest.pos) end)
-    if ok and path.Status == Enum.PathStatus.Success then
-        for _, wp in ipairs(path:GetWaypoints()) do
+    local success, err = pcall(function()
+        path:ComputeAsync(char:GetPivot().Position, chest.pos)
+    end)
+    if success and path.Status == Enum.PathStatus.Success then
+        local waypoints = path:GetWaypoints()
+        for _, wp in ipairs(waypoints) do
             if not auto then break end
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
+        -- Verifica se o baú ainda existe e é permitido
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             contText.Text = "📊 Coletados: " .. coletados
@@ -464,35 +457,44 @@ local function mover(chest)
                 click:Click()
             else
                 local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then fireclickdetector(parte) end
+                if parte then
+                    fireclickdetector(parte)
+                end
             end
+            -- Aguarda um momento para o baú ser removido
+            task.wait(0.5)
         end
     else
         statusText.Text = "⚠️ Caminho bloqueado!"
     end
 end
 
--- Loop
+-- 🔥 LOOP CORRIGIDO (nunca para e sempre procura novos baús)
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
     loop = task.spawn(function()
         while auto do
             if hum and hum.Health > 0 then
+                -- Deleta baús ruins (sem contorno)
                 deletarRuins()
+                -- Procura baús bons
                 local chests = acharChests()
                 if #chests > 0 then
                     mover(chests[1])
                 else
                     statusText.Text = "🔍 Nenhum baú com contorno..."
                 end
+            else
+                statusText.Text = "⚠️ Personagem morto ou sem humanoid"
             end
+            -- Aguarda 1 segundo antes de procurar novamente (evita lag)
             task.wait(1)
         end
     end)
 end
 
--- Arrastar UI
+-- Arrastar UI (igual ao original)
 local arrastando = false
 local arrastarInicio, frameInicio
 barra.InputBegan:Connect(function(i)
@@ -512,7 +514,6 @@ UserInput.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then arrastando = false end
 end)
 
--- Arrastar bolinha
 local bolaArrastando = false
 local bolaInicio, bolaPosInicio
 bola.InputBegan:Connect(function(i)
@@ -532,7 +533,6 @@ UserInput.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then bolaArrastando = false end
 end)
 
--- Minimizar/Restaurar
 local function minimizar()
     frame.Visible = false
     bola.Visible = true
@@ -551,7 +551,6 @@ end)
 fechar.MouseButton1Click:Connect(minimizar)
 bola.MouseButton1Click:Connect(restaurar)
 
--- Toggle Auto Chest
 autoBtn.MouseButton1Click:Connect(function()
     auto = not auto
     if auto then
@@ -569,7 +568,6 @@ autoBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Anti AFK
 local afkAtivo = false
 local afkLoop
 local function iniciarAFK()
@@ -608,17 +606,15 @@ afkBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Iniciar com velocidade 50
 task.spawn(function()
     wait(2)
-    setSpeed(50)   -- <--- ALTERADO de 16 para 50
+    setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13.0 - Velocidade inicial 50")
-    avisar("🚀 Auto Chest ON | Velocidade 50 (pode diminuir até 16)")
+    print("✅ Chest Finder v13.0 - Coleta contínua corrigida")
+    avisar("🚀 Auto Chest ON - Coletando baús com contorno")
 end)
 
--- Animação
 task.spawn(function()
     while true do
         for i = 0, 1, 0.05 do
