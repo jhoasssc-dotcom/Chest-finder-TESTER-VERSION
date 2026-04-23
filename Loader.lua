@@ -1,4 +1,4 @@
---[[ Chest Finder v13.0 - Coleta contínua (corrigido) --]]
+--[[ Chest Finder v13.0 - Coleta contínua + pulo automático --]]
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
@@ -111,7 +111,7 @@ local function acharChests()
     return lista
 end
 
--- GUI (exatamente igual ao v13.0 original)
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChestFinder"
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
@@ -336,7 +336,7 @@ local infoText = Instance.new("TextLabel")
 infoText.Size = UDim2.new(1, -10, 1, -10)
 infoText.Position = UDim2.new(0, 5, 0, 5)
 infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO\n🗑️ Deleta baús da loja e recompensas"
+infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO\n🗑️ Deleta baús da loja e recompensas\n🦘 Dá pulo automático ao chegar"
 infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
 infoText.TextSize = 9
 infoText.TextWrapped = true
@@ -431,12 +431,12 @@ local function avisar(msg)
     notifFrame.Visible = false
 end
 
--- 🔥 FUNÇÃO MOVER CORRIGIDA (garante que o loop continue)
+-- 🔥 FUNÇÃO MOVER CORRIGIDA (com pulo automático)
 local function mover(chest)
     if not chest or not hum then return end
     statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local success, err = pcall(function()
+    local success = pcall(function()
         path:ComputeAsync(char:GetPivot().Position, chest.pos)
     end)
     if success and path.Status == Enum.PathStatus.Success then
@@ -446,7 +446,10 @@ local function mover(chest)
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
-        -- Verifica se o baú ainda existe e é permitido
+        -- ✅ DÁ UM PULO AO CHEGAR PERTO DO BAÚ
+        hum.Jump = true
+        task.wait(0.3)
+        
         if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
             coletados = coletados + 1
             contText.Text = "📊 Coletados: " .. coletados
@@ -461,7 +464,6 @@ local function mover(chest)
                     fireclickdetector(parte)
                 end
             end
-            -- Aguarda um momento para o baú ser removido
             task.wait(0.5)
         end
     else
@@ -469,32 +471,27 @@ local function mover(chest)
     end
 end
 
--- 🔥 LOOP CORRIGIDO (nunca para e sempre procura novos baús)
+-- Loop infinito corrigido
 local loop
 local function iniciarLoop()
     if loop then task.cancel(loop) end
     loop = task.spawn(function()
         while auto do
             if hum and hum.Health > 0 then
-                -- Deleta baús ruins (sem contorno)
                 deletarRuins()
-                -- Procura baús bons
                 local chests = acharChests()
                 if #chests > 0 then
                     mover(chests[1])
                 else
                     statusText.Text = "🔍 Nenhum baú com contorno..."
                 end
-            else
-                statusText.Text = "⚠️ Personagem morto ou sem humanoid"
             end
-            -- Aguarda 1 segundo antes de procurar novamente (evita lag)
             task.wait(1)
         end
     end)
 end
 
--- Arrastar UI (igual ao original)
+-- Arrastar UI
 local arrastando = false
 local arrastarInicio, frameInicio
 barra.InputBegan:Connect(function(i)
@@ -558,7 +555,7 @@ autoBtn.MouseButton1Click:Connect(function()
         autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
         iniciarLoop()
         statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON - Só pega baús com contorno")
+        avisar("✅ Auto Chest ON - Coleta contínua com pulo")
     else
         autoBtn.Text = "🔍 Auto Chest: OFF"
         autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -611,8 +608,8 @@ task.spawn(function()
     setSpeed(16)
     deletarRuins()
     iniciarLoop()
-    print("✅ Chest Finder v13.0 - Coleta contínua corrigida")
-    avisar("🚀 Auto Chest ON - Coletando baús com contorno")
+    print("✅ Chest Finder v13.0 - Coleta contínua + pulo automático")
+    avisar("🚀 Auto Chest ON | Coletando baús com contorno + pulo")
 end)
 
 task.spawn(function()
