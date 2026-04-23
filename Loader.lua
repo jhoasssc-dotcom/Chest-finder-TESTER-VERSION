@@ -1,28 +1,15 @@
---[[ Chest Finder v13.0 - Coleta contínua + pulo automático --]]
+--[[ Chest Finder v1.0 (corrigido) – Coleta contínua ]]--
 
 local Players = game:GetService("Players")
 local Pathfinding = game:GetService("PathfindingService")
-local UserInput = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
 
 local auto = true
 local coletados = 0
-local velocidade = 16
 
-local function setSpeed(s)
-    velocidade = math.clamp(s, 10, 100)
-    hum.WalkSpeed = velocidade
-    if speedValueBtn then speedValueBtn.Text = tostring(math.floor(velocidade)) end
-    if sliderFill then
-        local p = (velocidade - 10) / 90
-        sliderFill.Size = UDim2.new(p, 0, 1, 0)
-        sliderBtn.Position = UDim2.new(p, -6, 0.5, -6)
-    end
-end
-
--- 🔍 Verifica contorno
+-- Função para verificar se o baú tem contorno (Highlight ou SelectionBox)
 local function temContorno(obj)
     if obj:FindFirstChildWhichIsA("Highlight") then return true end
     if obj:FindFirstChildWhichIsA("SelectionBox") then return true end
@@ -36,13 +23,10 @@ local function temContorno(obj)
     return false
 end
 
-local proibidas = {
-    "presente", "gratuito", "free", "gift", "reward", "recompensa", "brinde",
-    "shop", "loja", "store", "buy", "comprar", "roblox", "robux", "premium", "vip",
-    "fuse", "set", "event", "starter", "iniciante", "pack", "pacote",
-    "yellow", "amarelo", "gold", "dourado", "group", "grupo", "daily", "weekly", "bonus"
-}
+-- Palavras proibidas (loja, recompensa, etc.)
+local proibidas = {"presente","gratuito","free","gift","reward","shop","loja","store","buy","roblox","robux","fuse","group","daily","weekly","yellow","gold"}
 
+-- Verifica se é um baú ruim (loja/recompensa)
 local function isRuim(obj)
     local current = obj
     for i = 1, 5 do
@@ -51,576 +35,186 @@ local function isRuim(obj)
         for _, p in ipairs(proibidas) do
             if string.find(nome, p) then return true end
         end
-        if current:FindFirstChild("Price") or current:FindFirstChild("RobuxPrice") or current:FindFirstChild("Cost") then
-            return true
-        end
+        if current:FindFirstChild("Price") or current:FindFirstChild("RobuxPrice") then return true end
         current = current.Parent
     end
     return false
 end
 
-local function deletarRuins()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        local nome = string.lower(obj.Name or "")
-        if (string.find(nome, "chest") or string.find(nome, "bau") or obj:FindFirstChild("ClickDetector")) then
-            if not temContorno(obj) and isRuim(obj) then
-                pcall(function() obj:Destroy() end)
-            end
-        end
-    end
-end
-
+-- Verifica se o baú é permitido (tem contorno e não é ruim)
 local function isPermitido(obj)
     local nome = string.lower(obj.Name or "")
     if not (string.find(nome, "chest") or string.find(nome, "bau")) then return false end
     return temContorno(obj) and not isRuim(obj)
 end
 
-local function getTipo(nome)
-    local n = string.lower(nome)
-    if string.find(n, "rainbow") or string.find(n, "arco") then
-        return "🌈 Arco-Íris", 5, "🌈"
-    elseif string.find(n, "legendary") or string.find(n, "lendario") then
-        return "🏆 Lendário", 4, "🏆"
-    elseif string.find(n, "rare") or string.find(n, "raro") then
-        return "💎 Raro", 3, "💎"
-    else
-        return "📦 Comum", 1, "📦"
-    end
-end
-
-local function acharChests()
-    local lista = {}
+-- Encontra o baú mais próximo permitido
+local function acharMelhorBaú()
+    local melhor = nil
+    local menorDist = math.huge
     local posChar = char:GetPivot().Position
     for _, obj in ipairs(workspace:GetDescendants()) do
         if isPermitido(obj) and (obj:IsA("BasePart") or obj:IsA("Model")) then
             local pos = obj:IsA("Model") and obj:GetPivot().Position or obj.Position
             if pos then
-                local tipo, prio, emoji = getTipo(obj.Name)
                 local dist = (posChar - pos).Magnitude
-                if dist < 500 then
-                    table.insert(lista, {obj = obj, pos = pos, dist = dist, tipo = tipo, prio = prio, emoji = emoji})
+                if dist < menorDist and dist < 500 then
+                    menorDist = dist
+                    melhor = {obj = obj, pos = pos, dist = dist}
                 end
             end
         end
     end
-    table.sort(lista, function(a, b)
-        if a.prio ~= b.prio then return a.prio > b.prio end
-        return a.dist < b.dist
-    end)
-    return lista
+    return melhor
 end
 
--- GUI
-local gui = Instance.new("ScreenGui")
-gui.Name = "ChestFinder"
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-gui.DisplayOrder = 999
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local bola = Instance.new("ImageButton")
-bola.Size = UDim2.new(0, 50, 0, 50)
-bola.Position = UDim2.new(0, 10, 0, 100)
-bola.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-bola.Image = "rbxassetid://3926305904"
-bola.ImageColor3 = Color3.fromRGB(0, 255, 255)
-bola.Visible = true
-bola.ZIndex = 999
-bola.Parent = gui
-
-local bolaC = Instance.new("UICorner")
-bolaC.CornerRadius = UDim.new(1, 0)
-bolaC.Parent = bola
-
-local bolaTexto = Instance.new("TextLabel")
-bolaTexto.Size = UDim2.new(1, 0, 1, 0)
-bolaTexto.BackgroundTransparency = 1
-bolaTexto.Text = "S"
-bolaTexto.TextColor3 = Color3.fromRGB(0, 0, 0)
-bolaTexto.TextSize = 28
-bolaTexto.Font = Enum.Font.GothamBold
-bolaTexto.Parent = bola
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 340, 0, 450)
-frame.Position = UDim2.new(0.5, -170, 0.5, -225)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-frame.BackgroundTransparency = 0.05
-frame.BorderSizePixel = 0
-frame.Visible = false
-frame.ZIndex = 998
-frame.Parent = gui
-
-local frameC = Instance.new("UICorner")
-frameC.CornerRadius = UDim.new(0, 10)
-frameC.Parent = frame
-
-local borda = Instance.new("Frame")
-borda.Size = UDim2.new(1, 0, 1, 0)
-borda.BackgroundTransparency = 1
-borda.BorderSizePixel = 2
-borda.BorderColor3 = Color3.fromRGB(0, 255, 255)
-borda.Parent = frame
-
-local barra = Instance.new("Frame")
-barra.Size = UDim2.new(1, 0, 0, 30)
-barra.BackgroundTransparency = 1
-barra.Parent = frame
-
-local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -60, 0, 30)
-titulo.Position = UDim2.new(0, 5, 0, 0)
-titulo.BackgroundTransparency = 1
-titulo.Text = "🎁 Chest Finder v13.0"
-titulo.TextColor3 = Color3.fromRGB(0, 255, 255)
-titulo.TextSize = 12
-titulo.Font = Enum.Font.GothamBold
-titulo.TextXAlignment = Enum.TextXAlignment.Left
-titulo.Parent = barra
-
-local mini = Instance.new("TextButton")
-mini.Size = UDim2.new(0, 25, 0, 25)
-mini.Position = UDim2.new(1, -30, 0, 3)
-mini.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-mini.Text = "⬤"
-mini.TextColor3 = Color3.fromRGB(0, 255, 255)
-mini.TextSize = 14
-mini.Font = Enum.Font.GothamBold
-mini.Parent = barra
-
-local miniC = Instance.new("UICorner")
-miniC.CornerRadius = UDim.new(0, 5)
-miniC.Parent = mini
-
-local fechar = Instance.new("TextButton")
-fechar.Size = UDim2.new(0, 25, 0, 25)
-fechar.Position = UDim2.new(1, -58, 0, 3)
-fechar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-fechar.Text = "✕"
-fechar.TextColor3 = Color3.fromRGB(255, 100, 100)
-fechar.TextSize = 14
-fechar.Font = Enum.Font.GothamBold
-fechar.Parent = barra
-
-local fecharC = Instance.new("UICorner")
-fecharC.CornerRadius = UDim.new(0, 5)
-fecharC.Parent = fechar
-
-local autoBtn = Instance.new("TextButton")
-autoBtn.Size = UDim2.new(0, 310, 0, 35)
-autoBtn.Position = UDim2.new(0.5, -155, 0, 45)
-autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
-autoBtn.Text = "🔍 Auto Chest: ON"
-autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autoBtn.TextSize = 13
-autoBtn.Font = Enum.Font.GothamSemibold
-autoBtn.Parent = frame
-
-local autoC = Instance.new("UICorner")
-autoC.CornerRadius = UDim.new(0, 6)
-autoC.Parent = autoBtn
-
-local afkBtn = Instance.new("TextButton")
-afkBtn.Size = UDim2.new(0, 310, 0, 35)
-afkBtn.Position = UDim2.new(0.5, -155, 0, 88)
-afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-afkBtn.Text = "💤 Anti-AFK: OFF"
-afkBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-afkBtn.TextSize = 13
-afkBtn.Font = Enum.Font.GothamSemibold
-afkBtn.Parent = frame
-
-local afkC = Instance.new("UICorner")
-afkC.CornerRadius = UDim.new(0, 6)
-afkC.Parent = afkBtn
-
-local speedFrame = Instance.new("Frame")
-speedFrame.Size = UDim2.new(0, 310, 0, 50)
-speedFrame.Position = UDim2.new(0.5, -155, 0, 133)
-speedFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-speedFrame.BackgroundTransparency = 0.3
-speedFrame.Parent = frame
-
-local speedC = Instance.new("UICorner")
-speedC.CornerRadius = UDim.new(0, 6)
-speedC.Parent = speedFrame
-
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(0, 60, 1, 0)
-speedLabel.Position = UDim2.new(0, 10, 0, 0)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "⚡ Velocidade:"
-speedLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-speedLabel.TextSize = 11
-speedLabel.Font = Enum.Font.GothamBold
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-speedLabel.Parent = speedFrame
-
-local sliderBg = Instance.new("Frame")
-sliderBg.Size = UDim2.new(0, 170, 0, 5)
-sliderBg.Position = UDim2.new(0, 75, 0.5, -2.5)
-sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-sliderBg.BorderSizePixel = 0
-sliderBg.Parent = speedFrame
-
-local sliderBgC = Instance.new("UICorner")
-sliderBgC.CornerRadius = UDim.new(1, 0)
-sliderBgC.Parent = sliderBg
-
-local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new((velocidade - 10) / 90, 0, 1, 0)
-sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-sliderFill.BorderSizePixel = 0
-sliderFill.Parent = sliderBg
-
-local sliderBtn = Instance.new("TextButton")
-sliderBtn.Size = UDim2.new(0, 12, 0, 12)
-sliderBtn.Position = UDim2.new((velocidade - 10) / 90, -6, 0.5, -6)
-sliderBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-sliderBtn.Text = ""
-sliderBtn.BorderSizePixel = 0
-sliderBtn.Parent = sliderBg
-
-local speedValueBtn = Instance.new("TextButton")
-speedValueBtn.Size = UDim2.new(0, 45, 0, 28)
-speedValueBtn.Position = UDim2.new(1, -50, 0.5, -14)
-speedValueBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-speedValueBtn.Text = tostring(velocidade)
-speedValueBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-speedValueBtn.TextSize = 12
-speedValueBtn.Font = Enum.Font.GothamBold
-speedValueBtn.Parent = speedFrame
-
-local sliderDrag = false
-sliderBtn.MouseButton1Down:Connect(function() sliderDrag = true end)
-UserInput.InputChanged:Connect(function(input)
-    if sliderDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local pos = input.Position.X - sliderBg.AbsolutePosition.X
-        local p = math.clamp(pos / sliderBg.AbsoluteSize.X, 0, 1)
-        setSpeed(10 + (p * 90))
-    end
-end)
-UserInput.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then sliderDrag = false end
-)
-
-speedValueBtn.MouseButton1Click:Connect(function()
-    local edit = Instance.new("TextBox")
-    edit.Size = UDim2.new(1, 0, 1, 0)
-    edit.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    edit.Text = tostring(velocidade)
-    edit.TextColor3 = Color3.fromRGB(0, 255, 255)
-    edit.TextSize = 12
-    edit.Font = Enum.Font.GothamBold
-    edit.TextXAlignment = Enum.TextXAlignment.Center
-    edit.Parent = speedValueBtn
-    edit.FocusLost:Connect(function()
-        local n = tonumber(edit.Text)
-        if n then setSpeed(n) end
-        edit:Destroy()
-    end)
-end)
-
-local infoFrame = Instance.new("Frame")
-infoFrame.Size = UDim2.new(0, 310, 0, 50)
-infoFrame.Position = UDim2.new(0.5, -155, 0, 193)
-infoFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-infoFrame.BackgroundTransparency = 0.3
-infoFrame.Parent = frame
-
-local infoC = Instance.new("UICorner")
-infoC.CornerRadius = UDim.new(0, 6)
-infoC.Parent = infoFrame
-
-local infoText = Instance.new("TextLabel")
-infoText.Size = UDim2.new(1, -10, 1, -10)
-infoText.Position = UDim2.new(0, 5, 0, 5)
-infoText.BackgroundTransparency = 1
-infoText.Text = "🔍 Só pega baús com CONTORNO BRANCO\n🗑️ Deleta baús da loja e recompensas\n🦘 Dá pulo automático ao chegar"
-infoText.TextColor3 = Color3.fromRGB(200, 200, 200)
-infoText.TextSize = 9
-infoText.TextWrapped = true
-infoText.Font = Enum.Font.Gotham
-infoText.Parent = infoFrame
-
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 310, 0, 50)
-statusFrame.Position = UDim2.new(0.5, -155, 0, 253)
-statusFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-statusFrame.BackgroundTransparency = 0.3
-statusFrame.Parent = frame
-
-local statusC = Instance.new("UICorner")
-statusC.CornerRadius = UDim.new(0, 6)
-statusC.Parent = statusFrame
-
-local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -10, 1, -10)
-statusText.Position = UDim2.new(0, 5, 0, 5)
-statusText.BackgroundTransparency = 1
-statusText.Text = "✅ Auto Chest ATIVADO!"
-statusText.TextColor3 = Color3.fromRGB(0, 255, 100)
-statusText.TextSize = 10
-statusText.TextWrapped = true
-statusText.Font = Enum.Font.Gotham
-statusText.Parent = statusFrame
-
-local contFrame = Instance.new("Frame")
-contFrame.Size = UDim2.new(0, 310, 0, 30)
-contFrame.Position = UDim2.new(0.5, -155, 0, 313)
-contFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-contFrame.BackgroundTransparency = 0.3
-contFrame.Parent = frame
-
-local contC = Instance.new("UICorner")
-contC.CornerRadius = UDim.new(0, 6)
-contC.Parent = contFrame
-
-local contText = Instance.new("TextLabel")
-contText.Size = UDim2.new(1, -10, 1, -10)
-contText.Position = UDim2.new(0, 5, 0, 5)
-contText.BackgroundTransparency = 1
-contText.Text = "📊 Coletados: 0"
-contText.TextColor3 = Color3.fromRGB(0, 255, 255)
-contText.TextSize = 11
-contText.Font = Enum.Font.Gotham
-contText.Parent = contFrame
-
-local resetBtn = Instance.new("TextButton")
-resetBtn.Size = UDim2.new(0, 90, 0, 28)
-resetBtn.Position = UDim2.new(0.5, -45, 0, 355)
-resetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-resetBtn.Text = "↺ Resetar (16)"
-resetBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
-resetBtn.TextSize = 10
-resetBtn.Font = Enum.Font.Gotham
-resetBtn.Parent = frame
-
-local resetC = Instance.new("UICorner")
-resetC.CornerRadius = UDim.new(0, 5)
-resetC.Parent = resetBtn
-
-resetBtn.MouseButton1Click:Connect(function() setSpeed(16) end)
-
-local notifFrame = Instance.new("Frame")
-notifFrame.Size = UDim2.new(0, 250, 0, 45)
-notifFrame.Position = UDim2.new(1, -270, 0, 50)
-notifFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-notifFrame.BackgroundTransparency = 0.1
-notifFrame.Visible = false
-notifFrame.Parent = gui
-
-local notifC = Instance.new("UICorner")
-notifC.CornerRadius = UDim.new(0, 6)
-notifC.Parent = notifFrame
-
-local notifText = Instance.new("TextLabel")
-notifText.Size = UDim2.new(1, -10, 1, -10)
-notifText.Position = UDim2.new(0, 5, 0, 5)
-notifText.BackgroundTransparency = 1
-notifText.Text = ""
-notifText.TextColor3 = Color3.fromRGB(0, 255, 255)
-notifText.TextSize = 11
-notifText.Font = Enum.Font.Gotham
-notifText.Parent = notifFrame
-
-local function avisar(msg)
-    notifText.Text = msg
-    notifFrame.Visible = true
-    task.wait(2)
-    notifFrame.Visible = false
-end
-
--- 🔥 FUNÇÃO MOVER CORRIGIDA (com pulo automático)
-local function mover(chest)
-    if not chest or not hum then return end
-    statusText.Text = chest.emoji .. " " .. chest.tipo .. " (" .. math.floor(chest.dist) .. "m)"
+-- Função para mover e coletar o baú
+local function moverEColetar(baú)
+    if not baú or not hum then return end
+    -- Cria caminho
     local path = Pathfinding:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-    local success = pcall(function()
-        path:ComputeAsync(char:GetPivot().Position, chest.pos)
+    local sucesso = pcall(function()
+        path:ComputeAsync(char:GetPivot().Position, baú.pos)
     end)
-    if success and path.Status == Enum.PathStatus.Success then
+    if sucesso and path.Status == Enum.PathStatus.Success then
         local waypoints = path:GetWaypoints()
         for _, wp in ipairs(waypoints) do
             if not auto then break end
             hum:MoveTo(wp.Position)
             hum.MoveToFinished:Wait(1)
         end
-        -- ✅ DÁ UM PULO AO CHEGAR PERTO DO BAÚ
+        -- Pulo ao chegar
         hum.Jump = true
         task.wait(0.3)
-        
-        if chest.obj and chest.obj.Parent and isPermitido(chest.obj) then
+        -- Verifica se o baú ainda existe
+        if baú.obj and baú.obj.Parent and isPermitido(baú.obj) then
             coletados = coletados + 1
-            contText.Text = "📊 Coletados: " .. coletados
-            avisar(chest.emoji .. " " .. chest.tipo .. " #" .. coletados)
-            statusText.Text = "✅ " .. chest.tipo .. "!"
-            local click = chest.obj:FindFirstChild("ClickDetector")
+            print("✅ Baú coletado! Total:", coletados)
+            -- Tenta clicar
+            local click = baú.obj:FindFirstChild("ClickDetector")
             if click then
                 click:Click()
             else
-                local parte = chest.obj:IsA("BasePart") and chest.obj or chest.obj:FindFirstChildWhichIsA("BasePart")
-                if parte then
-                    fireclickdetector(parte)
-                end
+                local parte = baú.obj:IsA("BasePart") and baú.obj or baú.obj:FindFirstChildWhichIsA("BasePart")
+                if parte then fireclickdetector(parte) end
             end
-            task.wait(0.5)
+            task.wait(0.5) -- aguarda o baú sumir
         end
     else
-        statusText.Text = "⚠️ Caminho bloqueado!"
+        print("❌ Caminho bloqueado para o baú")
     end
 end
 
--- Loop infinito corrigido
-local loop
+-- 🔁 LOOP PRINCIPAL (infinito)
+local loopTask
 local function iniciarLoop()
-    if loop then task.cancel(loop) end
-    loop = task.spawn(function()
+    if loopTask then task.cancel(loopTask) end
+    loopTask = task.spawn(function()
         while auto do
             if hum and hum.Health > 0 then
-                deletarRuins()
-                local chests = acharChests()
-                if #chests > 0 then
-                    mover(chests[1])
+                local baú = acharMelhorBaú()
+                if baú then
+                    moverEColetar(baú)
                 else
-                    statusText.Text = "🔍 Nenhum baú com contorno..."
+                    print("🔍 Nenhum baú permitido encontrado. Aguardando...")
                 end
             end
-            task.wait(1)
+            task.wait(1) -- espera 1 segundo antes de procurar novamente
         end
     end)
 end
 
--- Arrastar UI
-local arrastando = false
-local arrastarInicio, frameInicio
-barra.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        arrastando = true
-        arrastarInicio = i.Position
-        frameInicio = frame.Position
-    end
-end)
-UserInput.InputChanged:Connect(function(i)
-    if arrastando and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = i.Position - arrastarInicio
-        frame.Position = UDim2.new(frameInicio.X.Scale, frameInicio.X.Offset + delta.X, frameInicio.Y.Scale, frameInicio.Y.Offset + delta.Y)
-    end
-end)
-UserInput.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then arrastando = false end
-end)
+-- GUI mínima (apenas uma bolinha para ativar/desativar)
+local gui = Instance.new("ScreenGui")
+gui.Name = "ChestFinder"
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local bolaArrastando = false
-local bolaInicio, bolaPosInicio
-bola.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        bolaArrastando = true
-        bolaInicio = i.Position
-        bolaPosInicio = bola.Position
-    end
-end)
-UserInput.InputChanged:Connect(function(i)
-    if bolaArrastando and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = i.Position - bolaInicio
-        bola.Position = UDim2.new(bolaPosInicio.X.Scale, bolaPosInicio.X.Offset + delta.X, bolaPosInicio.Y.Scale, bolaPosInicio.Y.Offset + delta.Y)
-    end
-end)
-UserInput.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then bolaArrastando = false end
-end)
+local bola = Instance.new("ImageButton")
+bola.Size = UDim2.new(0, 50, 0, 50)
+bola.Position = UDim2.new(0, 10, 0, 100)
+bola.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
+bola.Image = "rbxassetid://3926305904"
+bola.Parent = gui
+local bolaC = Instance.new("UICorner")
+bolaC.CornerRadius = UDim.new(1, 0)
+bolaC.Parent = bola
 
-local function minimizar()
-    frame.Visible = false
-    bola.Visible = true
-    avisar("📌 Minimizado")
+-- Frame de status simples
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Position = UDim2.new(0.5, -100, 0.5, -50)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+frame.Visible = false
+frame.Parent = gui
+local frameC = Instance.new("UICorner")
+frameC.CornerRadius = UDim.new(0, 8)
+frameC.Parent = frame
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, 0, 0, 30)
+statusText.Position = UDim2.new(0, 0, 0, 10)
+statusText.BackgroundTransparency = 1
+statusText.Text = "Auto Chest: ON"
+statusText.TextColor3 = Color3.fromRGB(0,255,0)
+statusText.TextSize = 14
+statusText.Font = Enum.Font.GothamBold
+statusText.Parent = frame
+
+local countText = Instance.new("TextLabel")
+countText.Size = UDim2.new(1, 0, 0, 30)
+countText.Position = UDim2.new(0, 0, 0, 45)
+countText.BackgroundTransparency = 1
+countText.Text = "Coletados: 0"
+countText.TextColor3 = Color3.fromRGB(0,255,255)
+countText.TextSize = 12
+countText.Font = Enum.Font.Gotham
+countText.Parent = frame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 80, 0, 30)
+toggleBtn.Position = UDim2.new(0.5, -40, 0, 80)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0,100,0)
+toggleBtn.Text = "Desativar"
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Parent = frame
+local toggleC = Instance.new("UICorner")
+toggleC.CornerRadius = UDim.new(0, 5)
+toggleC.Parent = toggleBtn
+
+-- Atualizar contador na UI
+local function atualizarUI()
+    countText.Text = "Coletados: " .. coletados
+end
+-- Sobrescreve a função de coletar para atualizar UI
+local oldMover = moverEColetar
+moverEColetar = function(baú)
+    oldMover(baú)
+    atualizarUI()
 end
 
-local function restaurar()
-    frame.Visible = true
-    bola.Visible = false
-    avisar("📂 Restaurado")
-end
-
-mini.MouseButton1Click:Connect(function()
-    if frame.Visible then minimizar() else restaurar() end
-end)
-fechar.MouseButton1Click:Connect(minimizar)
-bola.MouseButton1Click:Connect(restaurar)
-
-autoBtn.MouseButton1Click:Connect(function()
+-- Eventos da UI
+toggleBtn.MouseButton1Click:Connect(function()
     auto = not auto
     if auto then
-        autoBtn.Text = "🔍 Auto Chest: ON"
-        autoBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
+        toggleBtn.Text = "Desativar"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0,100,0)
+        statusText.Text = "Auto Chest: ON"
+        statusText.TextColor3 = Color3.fromRGB(0,255,0)
         iniciarLoop()
-        statusText.Text = "✅ ATIVADO!"
-        avisar("✅ Auto Chest ON - Coleta contínua com pulo")
     else
-        autoBtn.Text = "🔍 Auto Chest: OFF"
-        autoBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        if loop then task.cancel(loop) end
-        statusText.Text = "⏸️ DESATIVADO"
-        avisar("❌ Auto Chest OFF")
+        toggleBtn.Text = "Ativar"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(100,0,0)
+        statusText.Text = "Auto Chest: OFF"
+        statusText.TextColor3 = Color3.fromRGB(255,100,100)
+        if loopTask then task.cancel(loopTask) end
     end
 end)
 
-local afkAtivo = false
-local afkLoop
-local function iniciarAFK()
-    afkLoop = task.spawn(function()
-        while afkAtivo do
-            task.wait(240)
-            if afkAtivo then
-                local mouse = player:GetMouse()
-                if mouse then
-                    local x = mouse.X
-                    mouse.Move(x + 1, mouse.Y)
-                    task.wait(0.1)
-                    mouse.Move(x, mouse.Y)
-                end
-                if hum then
-                    hum:MoveTo(char:GetPivot().Position + Vector3.new(1, 0, 0))
-                    task.wait(0.2)
-                    hum:MoveTo(char:GetPivot().Position)
-                end
-            end
-        end
-    end)
-end
-afkBtn.MouseButton1Click:Connect(function()
-    afkAtivo = not afkAtivo
-    if afkAtivo then
-        afkBtn.Text = "💤 Anti-AFK: ON"
-        afkBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
-        iniciarAFK()
-        avisar("💤 Anti-AFK ON")
-    else
-        afkBtn.Text = "💤 Anti-AFK: OFF"
-        afkBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        if afkLoop then task.cancel(afkLoop) end
-        avisar("💪 Anti-AFK OFF")
-    end
+bola.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
 end)
 
-task.spawn(function()
-    wait(2)
-    setSpeed(16)
-    deletarRuins()
-    iniciarLoop()
-    print("✅ Chest Finder v13.0 - Coleta contínua + pulo automático")
-    avisar("🚀 Auto Chest ON | Coletando baús com contorno + pulo")
-end)
-
-task.spawn(function()
-    while true do
-        for i = 0, 1, 0.05 do
-            local t = 0.5 + math.sin(i * math.pi) * 0.5
-            borda.BorderColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
-            if bola.Visible then
-                bola.ImageColor3 = Color3.fromRGB(0, 255 * (1 - t), 255)
-            end
-            task.wait(0.05)
-        end
-    end
-end)
+-- Inicia o loop
+iniciarLoop()
+print("✅ Script corrigido – Coleta vários baús (não para). Clique na bolinha azul para ver o menu.")
